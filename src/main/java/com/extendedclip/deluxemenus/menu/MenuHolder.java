@@ -34,6 +34,8 @@ public class MenuHolder implements InventoryHolder {
     private boolean parsePlaceholdersAfterArguments;
     private Map<String, String> typedArgs;
 
+    private final SetHolder setHolder = new SetHolder();
+
     public MenuHolder(Player viewer) {
         this.viewer = viewer;
     }
@@ -340,5 +342,9 @@ public class MenuHolder implements InventoryHolder {
 
     public Player getPlaceholderPlayer() {
         return placeholderPlayer;
+    }
+
+    public SetHolder getHoldItems() {
+        return setHolder;
     }
 }
