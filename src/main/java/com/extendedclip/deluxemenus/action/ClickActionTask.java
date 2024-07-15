@@ -3,25 +3,21 @@ package com.extendedclip.deluxemenus.action;
 import com.extendedclip.deluxemenus.DeluxeMenus;
 import com.extendedclip.deluxemenus.menu.Menu;
 import com.extendedclip.deluxemenus.menu.MenuHolder;
-import com.extendedclip.deluxemenus.utils.AdventureUtils;
-import com.extendedclip.deluxemenus.utils.DebugLevel;
-import com.extendedclip.deluxemenus.utils.ExpUtils;
-import com.extendedclip.deluxemenus.utils.StringUtils;
-import com.extendedclip.deluxemenus.utils.VersionHelper;
+import com.extendedclip.deluxemenus.menu.MenuItem;
+import com.extendedclip.deluxemenus.menu.SetHolder;
+import com.extendedclip.deluxemenus.utils.*;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.logging.Level;
 
 public class ClickActionTask extends BukkitRunnable {
@@ -433,6 +429,120 @@ public class ClickActionTask extends BukkitRunnable {
                         break;
                 }
                 break;
+
+            case SET_ITEM, SET_LORE, SET_NAME: {
+                if (holder.isEmpty()) {
+                    DeluxeMenus.debug(
+                            DebugLevel.MEDIUM,
+                            Level.WARNING,
+                            player.getName() + " does not have menu open!"
+                    );
+                    break;
+                }
+
+                // 40 4 item
+                String[] args = executable.split(" ");
+                if(args.length >= 3) {
+                    int time = Integer.parseInt(args[0]);
+                    Integer slot = Integer.parseInt(args[1]);
+                    SetHolder setHolder = holder.get().getHoldItems();
+                    String object = org.apache.commons.lang3.StringUtils.join(args, " ", 2, args.length);
+
+                    MenuItem item = holder.get().getItem(slot);
+                    ItemStack itemStack = item.getItemStack(holder.get());
+                    ItemMeta itemMeta = itemStack.getItemMeta();
+                    Object old = null;
+                    switch (actionType) {
+                        case SET_ITEM -> {
+                            if(setHolder.material.contains(slot)) {
+                                return;
+                            }
+                            old = itemStack.getType();
+                            item.options().setMaterial(object);
+                            itemStack.setType(Material.valueOf(object.toUpperCase()));
+                        }
+                        case SET_NAME -> {
+                            if(setHolder.name.contains(slot)) {
+                                return;
+                            }
+                            old = item.options().displayName().orElse(null);
+                            item.options().setDisplayName(object);
+                            if (itemMeta != null) {
+                                itemMeta.setDisplayName(object);
+                                itemStack.setItemMeta(itemMeta);
+                            }
+                        }
+                        case SET_LORE -> {
+                            if(setHolder.lore.contains(slot)) {
+                                return;
+                            }
+                            old = item.options().lore();
+                            List<String> lore = Collections.singletonList(object);
+                            item.options().setLore(lore);
+                            if (itemMeta != null) {
+                                itemMeta.setLore(lore);
+                                itemStack.setItemMeta(itemMeta);
+                            }
+                        }
+                    }
+                    holder.get().refreshMenu();
+                    Object finalOld = old;
+                    // SET_ITEM
+                    if(!setHolder.material.contains(slot)) {
+                        if(actionType == ActionType.SET_ITEM) {
+                            setHolder.material.add(slot);
+                            Bukkit.getScheduler().runTaskLaterAsynchronously(DeluxeMenus.getInstance(), () -> {
+                                Material material = (Material) finalOld;
+                                item.options().setMaterial(material.name());
+                                itemStack.setType(material);
+                                holder.get().getHoldItems().material.remove(slot);
+                                holder.get().refreshMenu();
+                            }, time);
+                        }
+                    }
+                    // SET NAME
+                    if(!setHolder.name.contains(slot)) {
+                        if(actionType == ActionType.SET_NAME) {
+                            setHolder.name.add(slot);
+                            Bukkit.getScheduler().runTaskLaterAsynchronously(DeluxeMenus.getInstance(), () -> {
+                                String name = (String) finalOld;
+                                item.options().setDisplayName(name);
+                                if(itemMeta != null) {
+                                    itemMeta.setDisplayName((String) finalOld);
+                                    itemStack.setItemMeta(itemMeta);
+                                }
+                                holder.get().getHoldItems().name.remove(slot);
+                                holder.get().refreshMenu();
+                            }, time);
+                        }
+                    }
+
+                    // SET LORE
+                    if(!setHolder.lore.contains(slot)) {
+                        if (actionType == ActionType.SET_LORE) {
+                            setHolder.lore.add(slot);
+                            Bukkit.getScheduler().runTaskLaterAsynchronously(DeluxeMenus.getInstance(), () -> {
+                                List<String> lore = (List<String>) finalOld;
+                                item.options().setLore(lore);
+                                if (itemMeta != null) {
+                                    itemMeta.setLore(lore);
+                                    itemStack.setItemMeta(itemMeta);
+                                }
+                                holder.get().getHoldItems().lore.remove(slot);
+                                holder.get().refreshMenu();
+                            }, time);
+                        }
+                    }
+                } else {
+                    DeluxeMenus.debug(
+                            DebugLevel.MEDIUM,
+                            Level.WARNING,
+                            player.getName() + " not enough arguments!"
+                    );
+                }
+
+                break;
+            }
 
             default:
                 break;
