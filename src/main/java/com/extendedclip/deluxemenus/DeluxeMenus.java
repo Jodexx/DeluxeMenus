@@ -99,8 +99,9 @@ public class DeluxeMenus extends JavaPlugin {
 
     menuItemMarker = new MenuItemMarker(this);
     dupeFixer = new DupeFixer(this, menuItemMarker);
-
+    try {
     this.adventure = BukkitAudiences.create(this);
+    } catch (NoClassDefFoundError ignored) {}
 
     setupItemHooks();
 
@@ -289,11 +290,19 @@ public class DeluxeMenus extends JavaPlugin {
   }
 
   public void sms(CommandSender s, Component msg) {
+    if(adventure != null) {
       adventure().sender(s).sendMessage(msg);
+    } else {
+      s.sendMessage(msg);
+    }
   }
 
   public void sms(CommandSender s, Messages msg) {
-    adventure().sender(s).sendMessage(msg.message());
+    if(adventure != null) {
+      adventure().sender(s).sendMessage(msg.message());
+    } else {
+      s.sendMessage(msg.message());
+    }
   }
 
   public static void debug(@NotNull final DebugLevel debugLevel, @NotNull final Level level, @NotNull final String... messages) {
