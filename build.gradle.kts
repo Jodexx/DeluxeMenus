@@ -22,7 +22,7 @@ repositories {
 }
 
 dependencies {
-    compileOnly(libs.spigot)
+    compileOnly("io.papermc.paper:paper-api:1.20.4-R0.1-SNAPSHOT")
 
     compileOnly(libs.vault)
     compileOnly(libs.authlib)
@@ -50,8 +50,8 @@ tasks {
         archiveFileName.set("DeluxeMenus-${rootProject.version}.jar")
     }
     java {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     processResources {
