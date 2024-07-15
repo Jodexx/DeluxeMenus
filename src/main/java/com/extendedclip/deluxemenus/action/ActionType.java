@@ -47,7 +47,10 @@ public enum ActionType {
   BROADCAST_JSON("[broadcastjson]", "Broadcast a json message to all online players",
       "- '[broadcastjson] {\"text\":\"message\"}'"),
   PLACEHOLDER("[placeholder]", "Parse placeholders for a player without any chat or console output",
-      "- '[placeholder] %placeholder%'");
+      "- '[placeholder] %placeholder%'"),
+  SET_ITEM("[setitem]", "", "- '[setitem] <time> <item>'"),
+  SET_NAME("[setname]", "", "- '[setname] <time> <name>'"),
+  SET_LORE("[setlore]", "", "- '[setlore] <time> <lore>'");
 
   private static final Map<String, ActionType> BY_NAME = Arrays.stream(values())
       .collect(Collectors.toMap(e -> e.name().toUpperCase(Locale.ROOT), Function.identity()));
