@@ -22,14 +22,26 @@ import java.util.Set;
 
 public class MenuItemOptions {
 
-    private final String material;
+    public void setMaterial(String material) {
+        this.material = material;
+    }
+
+    public void setDisplayName(String displayName) {
+        this.displayName = displayName;
+    }
+
+    public void setLore(List<String> lore) {
+        this.lore = lore;
+    }
+
+    private String material;
     private final short data;
     private final int amount;
     private final String customModelData;
     private final String dynamicAmount;
     private final String lightLevel;
-    private final String displayName;
-    private final List<String> lore;
+    private String displayName;
+    private List<String> lore;
     private final DyeColor baseColor;
     private HeadType headType;
     private final String placeholderData;
