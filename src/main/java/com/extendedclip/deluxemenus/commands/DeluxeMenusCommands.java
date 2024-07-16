@@ -12,6 +12,7 @@ import com.extendedclip.deluxemenus.utils.Messages;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -178,9 +179,9 @@ public class DeluxeMenusCommands implements CommandExecutor {
 
             final ClickActionTask actionTask = new ClickActionTask(
                     plugin,
+                    0,
+                    Collections.singletonList(action),
                     target.getUniqueId(),
-                    action.getType(),
-                    action.getExecutable(),
                     holder.getTypedArgs(),
                     true,
                     true

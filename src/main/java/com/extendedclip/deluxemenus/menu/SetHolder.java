@@ -7,4 +7,13 @@ public class SetHolder {
     public List<Integer> material = new ArrayList<>();
     public List<Integer> name = new ArrayList<>();
     public List<Integer> lore = new ArrayList<>();
+
+    @Override
+    public String toString() {
+        return "SetHolder{" +
+                "material=" + material +
+                ", name=" + name +
+                ", lore=" + lore +
+                '}';
+    }
 }

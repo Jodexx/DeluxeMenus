@@ -8,7 +8,6 @@ import com.extendedclip.deluxemenus.action.ClickHandler;
 import com.extendedclip.deluxemenus.hooks.ItemHook;
 import com.extendedclip.deluxemenus.menu.LoreAppendMode;
 import com.extendedclip.deluxemenus.menu.Menu;
-import com.extendedclip.deluxemenus.menu.MenuHolder;
 import com.extendedclip.deluxemenus.menu.MenuItem;
 import com.extendedclip.deluxemenus.menu.options.MenuItemOptions;
 import com.extendedclip.deluxemenus.menu.options.MenuOptions;
@@ -1487,32 +1486,19 @@ public class DeluxeMenusConfig {
 
         if (!actions.isEmpty()) {
 
-            handler = new ClickHandler() {
-
-                @Override
-                public void onClick(@NotNull final MenuHolder holder) {
-
-                    for (ClickAction action : actions) {
-
-                        if (!action.checkChance(holder)) {
-                            continue;
-                        }
-
+            handler = holder -> {
+                if(!actions.isEmpty()) {
+                    if(!holder.isHold()) {
+                        holder.setHold(true);
                         final ClickActionTask actionTask = new ClickActionTask(
                                 plugin,
+                                0,
+                                actions,
                                 holder.getViewer().getUniqueId(),
-                                action.getType(),
-                                action.getExecutable(),
                                 holder.getTypedArgs(),
                                 holder.parsePlaceholdersInArguments(),
                                 holder.parsePlaceholdersAfterArguments()
                         );
-
-                        if (action.hasDelay()) {
-                            actionTask.runTaskLater(plugin, action.getDelay(holder));
-                            continue;
-                        }
-
                         actionTask.runTask(plugin);
                     }
                 }

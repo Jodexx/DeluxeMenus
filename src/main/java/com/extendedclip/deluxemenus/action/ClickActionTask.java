@@ -23,6 +23,9 @@ import java.util.logging.Level;
 public class ClickActionTask extends BukkitRunnable {
 
     private final DeluxeMenus plugin;
+    private final int index;
+    private final List<ClickAction> actions;
+    private final ClickAction action;
     private final UUID uuid;
     private final ActionType actionType;
     private final String exec;
@@ -30,20 +33,24 @@ public class ClickActionTask extends BukkitRunnable {
     private final Map<String, String> arguments;
     private final boolean parsePlaceholdersInArguments;
     private final boolean parsePlaceholdersAfterArguments;
+    private int cooldown = 0;
 
     public ClickActionTask(
             @NotNull final DeluxeMenus plugin,
+            final int index,
+            @NotNull final List<ClickAction> actions,
             @NotNull final UUID uuid,
-            @NotNull final ActionType actionType,
-            @NotNull final String exec,
             @NotNull final Map<String, String> arguments,
             final boolean parsePlaceholdersInArguments,
             final boolean parsePlaceholdersAfterArguments
     ) {
         this.plugin = plugin;
+        this.index = index;
+        this.actions = actions;
+        this.action = actions.get(index);
         this.uuid = uuid;
-        this.actionType = actionType;
-        this.exec = exec;
+        this.actionType = action.getType();
+        this.exec = action.getExecutable();
         this.arguments = arguments;
         this.parsePlaceholdersInArguments = parsePlaceholdersInArguments;
         this.parsePlaceholdersAfterArguments = parsePlaceholdersAfterArguments;
@@ -60,6 +67,24 @@ public class ClickActionTask extends BukkitRunnable {
         final Player target = holder.isPresent() && holder.get().getPlaceholderPlayer() != null
                 ? holder.get().getPlaceholderPlayer()
                 : player;
+
+        if(holder.isPresent()) {
+            if (!action.checkChance(holder.get())) {
+                if (actions.size() > index + 1) {
+                    final ClickActionTask actionTask = new ClickActionTask(
+                            plugin,
+                            index + 1,
+                            actions,
+                            uuid,
+                            arguments,
+                            parsePlaceholdersInArguments,
+                            parsePlaceholdersAfterArguments
+                    );
+                    actionTask.runTask(plugin);
+                }
+                return;
+            }
+        }
 
 
         final String executable = StringUtils.replacePlaceholdersAndArguments(
@@ -430,6 +455,14 @@ public class ClickActionTask extends BukkitRunnable {
                 }
                 break;
 
+            case COOLDOWN: {
+                String[] args = executable.split(" ");
+                if(args.length >= 1) {
+                    cooldown = Integer.parseInt(args[0]);
+                }
+                break;
+            }
+
             case SET_ITEM, SET_LORE, SET_NAME: {
                 if (holder.isEmpty()) {
                     DeluxeMenus.debug(
@@ -442,97 +475,117 @@ public class ClickActionTask extends BukkitRunnable {
 
                 // 40 4 item
                 String[] args = executable.split(" ");
-                if(args.length >= 3) {
+                if (args.length >= 3) {
                     int time = Integer.parseInt(args[0]);
                     Integer slot = Integer.parseInt(args[1]);
                     SetHolder setHolder = holder.get().getHoldItems();
                     String object = org.apache.commons.lang3.StringUtils.join(args, " ", 2, args.length);
 
                     MenuItem item = holder.get().getItem(slot);
-                    ItemStack itemStack = item.getItemStack(holder.get());
-                    ItemMeta itemMeta = itemStack.getItemMeta();
                     Object old = null;
+
                     switch (actionType) {
                         case SET_ITEM -> {
-                            if(setHolder.material.contains(slot)) {
+                            if (!setHolder.material.contains(slot)) {
+                                ItemStack itemStack = item.getItemStack(holder.get());
+                                ItemMeta itemMeta = itemStack.getItemMeta();
+                                old = itemStack.getType();
+                                item.options().setMaterial(object);
+                                itemStack.setType(Material.valueOf(object.toUpperCase()));
+                                itemStack.setItemMeta(itemMeta);
+                            } else {
+                                next(holder.get());
                                 return;
                             }
-                            old = itemStack.getType();
-                            item.options().setMaterial(object);
-                            itemStack.setType(Material.valueOf(object.toUpperCase()));
                         }
                         case SET_NAME -> {
-                            if(setHolder.name.contains(slot)) {
+                            if (!setHolder.name.contains(slot)) {
+                                ItemStack itemStack = item.getItemStack(holder.get());
+                                ItemMeta itemMeta = itemStack.getItemMeta();
+
+                                old = item.options().displayName().orElse(null);
+                                item.options().setDisplayName(object);
+                                if (itemMeta != null) {
+                                    itemMeta.setDisplayName(object);
+                                    itemStack.setItemMeta(itemMeta);
+                                }
+                            } else {
+                                next(holder.get());
                                 return;
-                            }
-                            old = item.options().displayName().orElse(null);
-                            item.options().setDisplayName(object);
-                            if (itemMeta != null) {
-                                itemMeta.setDisplayName(object);
-                                itemStack.setItemMeta(itemMeta);
                             }
                         }
                         case SET_LORE -> {
-                            if(setHolder.lore.contains(slot)) {
-                                return;
-                            }
-                            old = item.options().lore();
-                            List<String> lore = Collections.singletonList(object);
-                            item.options().setLore(lore);
-                            if (itemMeta != null) {
-                                itemMeta.setLore(lore);
-                                itemStack.setItemMeta(itemMeta);
-                            }
-                        }
-                    }
-                    holder.get().refreshMenu();
-                    Object finalOld = old;
-                    // SET_ITEM
-                    if(!setHolder.material.contains(slot)) {
-                        if(actionType == ActionType.SET_ITEM) {
-                            setHolder.material.add(slot);
-                            Bukkit.getScheduler().runTaskLaterAsynchronously(DeluxeMenus.getInstance(), () -> {
-                                Material material = (Material) finalOld;
-                                item.options().setMaterial(material.name());
-                                itemStack.setType(material);
-                                holder.get().getHoldItems().material.remove(slot);
-                                holder.get().refreshMenu();
-                            }, time);
-                        }
-                    }
-                    // SET NAME
-                    if(!setHolder.name.contains(slot)) {
-                        if(actionType == ActionType.SET_NAME) {
-                            setHolder.name.add(slot);
-                            Bukkit.getScheduler().runTaskLaterAsynchronously(DeluxeMenus.getInstance(), () -> {
-                                String name = (String) finalOld;
-                                item.options().setDisplayName(name);
-                                if(itemMeta != null) {
-                                    itemMeta.setDisplayName((String) finalOld);
+                            if (!setHolder.lore.contains(slot)) {
+                                ItemStack itemStack = item.getItemStack(holder.get());
+                                ItemMeta itemMeta = itemStack.getItemMeta();
+
+                                old = item.options().lore();
+                                List<String> lore = Collections.singletonList(object);
+                                item.options().setLore(lore);
+                                if (itemMeta != null) {
+                                    itemMeta.setLore(lore);
                                     itemStack.setItemMeta(itemMeta);
                                 }
-                                holder.get().getHoldItems().name.remove(slot);
-                                holder.get().refreshMenu();
-                            }, time);
+                            } else {
+                                next(holder.get());
+                                return;
+                            }
                         }
                     }
 
-                    // SET LORE
-                    if(!setHolder.lore.contains(slot)) {
-                        if (actionType == ActionType.SET_LORE) {
-                            setHolder.lore.add(slot);
-                            Bukkit.getScheduler().runTaskLaterAsynchronously(DeluxeMenus.getInstance(), () -> {
+                    holder.get().refreshMenu();
+                    Object finalOld = old;
+
+                    Runnable task = () -> {
+                        switch (actionType) {
+                            case SET_ITEM -> {
+                                ItemStack itemStack = item.getItemStack(holder.get());
+                                Material material = (Material) finalOld;
+                                if (material != null) {
+                                    item.options().setMaterial(material.name());
+                                    itemStack.setType(material);
+                                }
+                                setHolder.material.remove(slot);
+                            }
+                            case SET_NAME -> {
+                                ItemStack itemStack = item.getItemStack(holder.get());
+                                ItemMeta itemMeta = itemStack.getItemMeta();
+
+                                String name = (String) finalOld;
+                                item.options().setDisplayName(name);
+                                if (itemStack != null) {
+                                    itemMeta.setDisplayName(name);
+                                    itemStack.setItemMeta(itemMeta);
+                                }
+                                setHolder.name.remove(slot);
+                            }
+                            case SET_LORE -> {
+                                ItemStack itemStack = item.getItemStack(holder.get());
+                                ItemMeta itemMeta = itemStack.getItemMeta();
+
                                 List<String> lore = (List<String>) finalOld;
                                 item.options().setLore(lore);
                                 if (itemMeta != null) {
                                     itemMeta.setLore(lore);
                                     itemStack.setItemMeta(itemMeta);
                                 }
-                                holder.get().getHoldItems().lore.remove(slot);
-                                holder.get().refreshMenu();
-                            }, time);
+                                setHolder.lore.remove(slot);
+                            }
                         }
+                        holder.get().refreshMenu();
+                    };
+
+                    if (actionType == ActionType.SET_ITEM && !setHolder.material.contains(slot)) {
+                        setHolder.material.add(slot);
+                        Bukkit.getScheduler().runTaskLaterAsynchronously(DeluxeMenus.getInstance(), task, time);
+                    } else if (actionType == ActionType.SET_NAME && !setHolder.name.contains(slot)) {
+                        setHolder.name.add(slot);
+                        Bukkit.getScheduler().runTaskLaterAsynchronously(DeluxeMenus.getInstance(), task, time);
+                    } else if (actionType == ActionType.SET_LORE && !setHolder.lore.contains(slot)) {
+                        setHolder.lore.add(slot);
+                        Bukkit.getScheduler().runTaskLaterAsynchronously(DeluxeMenus.getInstance(), task, time);
                     }
+
                 } else {
                     DeluxeMenus.debug(
                             DebugLevel.MEDIUM,
@@ -544,8 +597,32 @@ public class ClickActionTask extends BukkitRunnable {
                 break;
             }
 
+
             default:
                 break;
         }
+        next(holder.orElse(new MenuHolder(player)));
+    }
+
+    private void next(MenuHolder holder) {
+        if(actions.size() > index + 1) {
+            final ClickActionTask actionTask = new ClickActionTask(
+                    plugin,
+                    index + 1,
+                    actions,
+                    uuid,
+                    arguments,
+                    parsePlaceholdersInArguments,
+                    parsePlaceholdersAfterArguments
+            );
+            actionTask.runTaskLater(plugin, cooldown);
+        }
+        if(actions.size() <= index + 1) {
+            holder.setHold(false);
+        }
+    }
+
+    public int getCooldown() {
+        return cooldown;
     }
 }

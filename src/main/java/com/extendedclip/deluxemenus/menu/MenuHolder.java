@@ -35,6 +35,7 @@ public class MenuHolder implements InventoryHolder {
     private Map<String, String> typedArgs;
 
     private final SetHolder setHolder = new SetHolder();
+    private boolean isHold = false;
 
     public MenuHolder(Player viewer) {
         this.viewer = viewer;
@@ -346,5 +347,13 @@ public class MenuHolder implements InventoryHolder {
 
     public SetHolder getHoldItems() {
         return setHolder;
+    }
+
+    public boolean isHold() {
+        return isHold;
+    }
+
+    public void setHold(boolean hold) {
+        isHold = hold;
     }
 }

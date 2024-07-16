@@ -50,7 +50,8 @@ public enum ActionType {
       "- '[placeholder] %placeholder%'"),
   SET_ITEM("[setitem]", "", "- '[setitem] <time> <item>'"),
   SET_NAME("[setname]", "", "- '[setname] <time> <name>'"),
-  SET_LORE("[setlore]", "", "- '[setlore] <time> <lore>'");
+  SET_LORE("[setlore]", "", "- '[setlore] <time> <lore>'"),
+  COOLDOWN("[cooldown]", "", "");
 
   private static final Map<String, ActionType> BY_NAME = Arrays.stream(values())
       .collect(Collectors.toMap(e -> e.name().toUpperCase(Locale.ROOT), Function.identity()));
